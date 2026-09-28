@@ -1,0 +1,56 @@
+.kpi-container {
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+.kpi-strip {
+  display: flex;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--color-institutional);
+  width: 100%;
+}
+
+.kpi-block {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid var(--border-color);
+}
+
+.kpi-block:last-child {
+  border-right: none;
+}
+
+.kpi-value {
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.kpi-label {
+  font-size: 11px;
+}
+
+@media (max-width: 768px) {
+  .kpi-strip {
+    flex-wrap: wrap;
+  }
+  
+  .kpi-block {
+    flex: 0 0 50%;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .kpi-block:nth-child(2n) {
+    border-right: none;
+  }
+  
+  .kpi-block:nth-last-child(-n+2) {
+    border-bottom: none;
+  }
+}

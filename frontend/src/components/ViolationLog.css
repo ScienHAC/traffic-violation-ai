@@ -1,0 +1,203 @@
+.violation-log-container {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.log-section {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.log-title {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.btn-export {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-export:hover:not(:disabled) {
+  background: #E2E8F0;
+}
+
+.btn-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-wrapper {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.violation-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.violation-table th {
+  background-color: var(--color-institutional);
+  color: #FFFFFF;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* Fix for sticky table header losing bottom border */
+  box-shadow: inset 0 -1px 0 var(--border-color);
+  border: none;
+}
+
+.empty-cell {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 32px 0;
+}
+
+.alpr-test-section {
+  width: 100%;
+}
+
+.alpr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.alpr-title {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.btn-upload {
+  background: var(--bg-base);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-upload:hover {
+  background: #E2E8F0;
+}
+
+.alpr-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 12px 0;
+}
+
+.alpr-msg.error {
+  color: var(--status-confirmed);
+}
+
+.alpr-result {
+  display: flex;
+  gap: 24px;
+  background: var(--bg-surface);
+  padding: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.alpr-img-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  border: 1px solid var(--border-color);
+}
+
+.alpr-preview {
+  max-width: 120px;
+  max-height: 60px;
+  object-fit: contain;
+}
+
+.alpr-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.detail-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.detail-val {
+  color: var(--text-primary);
+}
+
+.highlight-val {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+}
+
+.plate-dossier-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

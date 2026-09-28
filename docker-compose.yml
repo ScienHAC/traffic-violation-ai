@@ -1,0 +1,47 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - JUDGE_SERVER=http://judge:8001/api/violation
+      - CORS_ALLOW_ALL=true
+    volumes:
+      - api_models:/app/models
+      - api_logs:/app/outputs
+    depends_on:
+      - judge
+    restart: unless-stopped
+
+  judge:
+    build:
+      context: .
+      dockerfile: Dockerfile.judge
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_PATH=/app/data/traffic_analytics.db
+      - STATIC_DIR=/app/data/static/violations
+    volumes:
+      - judge_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_BASE=${VITE_API_BASE:-http://localhost:8000}
+        - VITE_JUDGE_API_BASE=${VITE_JUDGE_API_BASE:-http://localhost:8001}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+      - judge
+    restart: unless-stopped
+
+volumes:
+  api_models:
+  api_logs:
+  judge_data:

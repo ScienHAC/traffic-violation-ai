@@ -1,0 +1,22 @@
+ultralytics>=8.0.0
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+tqdm>=4.66.0
+kagglehub>=0.2.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# API / Networking
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+requests>=2.31.0
+httpx>=0.27.0
+
+# ALPR — Automatic License Plate Recognition
+easyocr>=1.7.0

@@ -1,0 +1,37 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System dependencies for OpenCV and EasyOCR
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU-only torch wheel — the default PyPI wheel bundles ~2GB of unused CUDA
+# libraries. This is a CPU-only container, so pull from the CPU wheel index.
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining Python dependencies (lean api-only set, see requirements-api.txt)
+COPY requirements-api.txt .
+RUN pip install --no-cache-dir -r requirements-api.txt
+
+# Copy source code
+COPY api/ ./api/
+COPY src/ ./src/
+COPY data.yaml .
+
+# Pre-download all model weights at build time so the first request isn't
+# stuck downloading ~120MB of weights (COCO tracker + helmet + seatbelt).
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8s.pt')" \
+    && python -c "\
+import requests, pathlib; \
+pathlib.Path('models').mkdir(exist_ok=True); \
+open('models/bike_helmet_yolov8.pt','wb').write(requests.get('https://raw.githubusercontent.com/Viddesh1/Bike-Helmet-Detectionv2/main/weights/best.pt', timeout=120).content); \
+open('models/seatbelt_yolov11s_cls.pt','wb').write(requests.get('https://huggingface.co/RISEF/yolov11s-seatbelt/resolve/main/weights/best.pt', timeout=120).content)"
+
+# Create data directory for any outputs
+RUN mkdir -p /app/data /app/outputs/logs
+
+EXPOSE 8000
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.pyo
+.Python
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+.env
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+
+# ML Models & Weights
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.engine
+*.torchscript
+
+models/weights/*
+!models/weights/.gitkeep
+
+runs/
+models/gridlock_v*/
+
+# Dataset & Raw Data
+data/raw/
+data/images/
+data/labels/
+
+!data/raw/.gitkeep
+!data/images/train/.gitkeep
+!data/images/val/.gitkeep
+!data/labels/train/.gitkeep
+!data/labels/val/.gitkeep
+
+# Outputs
+outputs/frames/
+outputs/logs/
+!outputs/frames/.gitkeep
+!outputs/logs/.gitkeep
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Kaggle
+kaggle.json
+.kaggle/
+
+# Logs
+*.log
+*.log.*
+
+# OS
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Runtime DB / evidence storage (created at runtime, not source)
+*.db
+hybrid_mvp/*.db
+data/

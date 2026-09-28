@@ -1,0 +1,11 @@
+# Lean deps for the judge service container — server.py never imports
+# ultralytics/opencv/torch (that's edge_client.py, a standalone script not
+# run as part of this service). requirements.txt keeps the full set for
+# local dev of edge_client.py; this is what actually gets built into the image.
+# Pinned (not >=) — an open-ended fastapi range pulled in a bleeding-edge
+# transitive dep that spiraled pip's resolver on python:3.11-slim.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart>=0.0.9
+sqlalchemy>=2.0.0
+reportlab>=4.0.0

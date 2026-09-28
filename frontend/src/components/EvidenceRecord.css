@@ -1,0 +1,52 @@
+/* Table row specific styling, overriding general table styles if needed */
+.evidence-row:nth-child(even) {
+  background-color: #F8FAFC; /* very light grey zebra striping */
+}
+
+.evidence-row:nth-child(odd) {
+  background-color: #FFFFFF;
+}
+
+.evidence-row td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.er-cell-type.status-confirmed {
+  color: var(--status-confirmed);
+}
+
+.er-cell-plate {
+  font-weight: 500;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.er-thumb {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.er-thumb:hover {
+  opacity: 0.8;
+}
+
+.er-thumb-placeholder {
+  width: 60px;
+  height: 40px;
+  background: var(--bg-base);
+  border: 1px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--text-secondary);
+  border-radius: 2px;
+}
