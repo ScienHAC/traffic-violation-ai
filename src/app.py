@@ -1,5 +1,5 @@
 """
-app.py — Gridlock: Traffic Violation Detection Dashboard
+app.py — TrafficGuard: Traffic Violation Detection Dashboard
   Streamlit-based UI for real-time/batch violation detection.
   Supports: image upload, video upload, webcam feed.
 """
@@ -17,7 +17,7 @@ from datetime import datetime
 import tempfile
 import time
 
-from src.detect import GridlockDetector
+from src.detect import TrafficGuardDetector
 from src.violations import ViolationChecker, summarize_violations
 from src.alpr import ALPRPipeline
 from src.utils import annotate_frame, save_violation_to_csv, load_violations_log
@@ -25,7 +25,7 @@ from src.utils import annotate_frame, save_violation_to_csv, load_violations_log
 # ─── Page config ──────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Gridlock — Traffic Violation Detection",
+    page_title="TrafficGuard — Traffic Violation Detection",
     page_icon="🚦",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -208,7 +208,7 @@ if "alpr" not in st.session_state:
 
 @st.cache_resource
 def load_detector(model_path: str, conf: float):
-    return GridlockDetector(model_path=model_path, conf_threshold=conf)
+    return TrafficGuardDetector(model_path=model_path, conf_threshold=conf)
 
 @st.cache_resource
 def load_alpr(plate_model_path: str = None):
@@ -220,7 +220,7 @@ with st.sidebar:
     st.markdown("""
     <div style="text-align:center; padding: 16px 0 8px 0;">
         <div style="font-size:32px">🚦</div>
-        <div style="font-size:18px; font-weight:800; letter-spacing:2px; color:#ff4757;">GRIDLOCK</div>
+        <div style="font-size:18px; font-weight:800; letter-spacing:2px; color:#ff4757;">TRAFFICGUARD</div>
         <div style="font-size:11px; color:#747d8c; letter-spacing:1px;">VIOLATION DETECTION SYSTEM</div>
     </div>
     <hr>
@@ -232,13 +232,13 @@ with st.sidebar:
     model_options = {
         "YOLOv8 Nano (pretrained)": "yolov8n.pt",
         "YOLOv8 Small (pretrained)": "yolov8s.pt",
-        "Custom Gridlock Model": "models/gridlock_v1/weights/best.pt",
+        "Custom TrafficGuard Model": "models/trafficguard_v1/weights/best.pt",
     }
     model_choice = st.selectbox("Detection Model", list(model_options.keys()))
     model_path = model_options[model_choice]
 
     # Guard: warn if custom model weights don't exist yet
-    if model_choice == "Custom Gridlock Model" and not Path(model_path).exists():
+    if model_choice == "Custom TrafficGuard Model" and not Path(model_path).exists():
         st.warning(
             "Custom weights not found. Train first:\n"
             "`python src/train.py`\n\n"
@@ -304,7 +304,7 @@ with st.sidebar:
 # Hero banner
 st.markdown("""
 <div class="hero">
-    <h1>🚦 Gridlock — Traffic Violation Detection</h1>
+    <h1>🚦 TrafficGuard — Traffic Violation Detection</h1>
     <p>AI-powered real-time detection of traffic violations · Helmet compliance · Triple riding · Licence plate recognition</p>
 </div>
 """, unsafe_allow_html=True)
@@ -586,7 +586,7 @@ with right_col:
 st.markdown("---")
 st.markdown("""
 <div style="text-align:center; color:#747d8c; font-size:12px; padding:8px 0 16px 0;">
-    🚦 Gridlock Prototype &nbsp;·&nbsp; YOLOv8 + PaddleOCR + Streamlit &nbsp;·&nbsp;
+    🚦 TrafficGuard Prototype &nbsp;·&nbsp; YOLOv8 + PaddleOCR + Streamlit &nbsp;·&nbsp;
     Built for Bengaluru Traffic Intelligence Research
 </div>
 """, unsafe_allow_html=True)

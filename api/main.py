@@ -1,5 +1,5 @@
 """
-api/main.py — Gridlock FastAPI Backend
+api/main.py — TrafficGuard FastAPI Backend
   Wraps the existing src/ detection pipeline behind REST + WebSocket endpoints.
   Models are lazy-loaded as singletons (expensive YOLO / PaddleOCR weights
   only load on first request, not at import time).
@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 # ─── App setup ────────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="Gridlock — Traffic Violation Detection API",
+    title="TrafficGuard — Traffic Violation Detection API",
     version="1.0.0",
     description="YOLOv8 + PaddleOCR violation detection REST and WebSocket API",
 )
@@ -76,7 +76,7 @@ print(f"[api/main.py] Compute device: {_DEVICE.upper()}")
 # ─── Two-stage helmet pipeline constants ──────────────────────────────────────
 
 _HELMET_MODEL_URL   = "https://raw.githubusercontent.com/Viddesh1/Bike-Helmet-Detectionv2/main/weights/best.pt"
-_HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "gridlock-prototype" / "models" / "bike_helmet_yolov8.pt"
+_HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "trafficguard-prototype" / "models" / "bike_helmet_yolov8.pt"
 # Normalise path so it works whether called from repo root or api/ dir
 if not _HELMET_MODEL_LOCAL.parent.exists():
     _HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "models" / "bike_helmet_yolov8.pt"
@@ -136,8 +136,8 @@ def get_detector(conf: float = 0.45) -> Any:
     """Return the shared detector singleton, loading on first call."""
     global _detector
     if _detector is None:
-        from src.detect import GridlockDetector
-        _detector = GridlockDetector(conf_threshold=conf)
+        from src.detect import TrafficGuardDetector
+        _detector = TrafficGuardDetector(conf_threshold=conf)
     return _detector
 
 

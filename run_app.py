@@ -1,5 +1,5 @@
 """
-run_app.py — Launcher for Gridlock Streamlit app
+run_app.py — Launcher for TrafficGuard Streamlit app
   Run this from the project root: python run_app.py
   It sets the correct Python path and launches streamlit.
 """
@@ -14,7 +14,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.getcwd())
 
 print("=" * 60)
-print("  🚦 GRIDLOCK — Traffic Violation Detection")
+print("  🚦 TRAFFICGUARD — Traffic Violation Detection")
 print("=" * 60)
 print(f"  Working dir : {os.getcwd()}")
 print(f"  Python      : {sys.executable}")

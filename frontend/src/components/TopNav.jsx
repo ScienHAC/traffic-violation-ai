@@ -55,7 +55,7 @@ export default function TopNav() {
     <header className="topnav">
       <div className="topnav-container">
         <div className="topnav-brand">
-          <div className="brand-logo">HAWKEYE</div>
+          <div className="brand-logo">TRAFFICGUARD</div>
           <div className="brand-subtext">Traffic Vision System</div>
         </div>
 

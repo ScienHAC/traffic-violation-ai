@@ -1,5 +1,5 @@
 """
-alpr.py — Automatic License Plate Recognition for Gridlock
+alpr.py — Automatic License Plate Recognition for TrafficGuard
   Pipeline:
     1. Detect plate region using a lightweight YOLO plate detector
        (uses a pretrained model from Roboflow/Ultralytics hub)

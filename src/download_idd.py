@@ -24,7 +24,7 @@ RAW_DIR = Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 print("=" * 60)
-print("Gridlock — IDD Dataset Download")
+print("TrafficGuard — IDD Dataset Download")
 print("=" * 60)
 
 # ─── Option 1: Load as Pandas DataFrame (metadata / CSV inspection) ───────────

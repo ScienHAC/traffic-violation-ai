@@ -1,5 +1,5 @@
 """
-violations.py — Rule-based traffic violation checker for Gridlock
+violations.py — Rule-based traffic violation checker for TrafficGuard
   Analyses detections from YOLOv8 and applies violation rules:
     1. NO_HELMET     — motorcycle rider with no helmet detected
     2. TRIPLE_RIDING — motorcycle with 3+ person bboxes overlapping

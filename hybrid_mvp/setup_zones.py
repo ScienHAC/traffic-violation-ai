@@ -57,7 +57,7 @@ def draw_overlay(base_frame) -> None:
         cv2.putText(disp, txt, (10, 26 + i * 24),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (220, 220, 220), 1)
 
-    cv2.imshow("HawkEye Zone Setup", disp)
+    cv2.imshow("TrafficGuard Zone Setup", disp)
 
 
 def save_config() -> None:
@@ -102,14 +102,14 @@ def main() -> None:
         scale = 1280 / w
         base_frame = cv2.resize(base_frame, (1280, int(h * scale)))
 
-    print("\n=== HawkEye Zone Calibration ===")
+    print("\n=== TrafficGuard Zone Calibration ===")
     print(f"  Video   : {VIDEO_PATH}  ({base_frame.shape[1]}x{base_frame.shape[0]})")
     print(f"  Config  : {CONFIG_PATH}")
     print("  Click 4 points to define the ROI polygon.")
     print("  Press S to save, R to reset, Q to quit.\n")
-    cv2.namedWindow("HawkEye Zone Setup", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("HawkEye Zone Setup", base_frame.shape[1], base_frame.shape[0])
-    cv2.setMouseCallback("HawkEye Zone Setup", mouse_callback)
+    cv2.namedWindow("TrafficGuard Zone Setup", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("TrafficGuard Zone Setup", base_frame.shape[1], base_frame.shape[0])
+    cv2.setMouseCallback("TrafficGuard Zone Setup", mouse_callback)
 
     while True:
         draw_overlay(base_frame)

@@ -1,7 +1,7 @@
 """
-train.py — YOLOv8 training script for Gridlock prototype
+train.py — YOLOv8 training script for TrafficGuard prototype
   Run this after dataset is prepared in data/ folder.
-  Saves best weights to models/gridlock_v1/weights/best.pt
+  Saves best weights to models/trafficguard_v1/weights/best.pt
 """
 
 from ultralytics import YOLO
@@ -17,7 +17,7 @@ IMG_SIZE    = 640
 BATCH_SIZE  = 8
 DEVICE      = 0 if torch.cuda.is_available() else "cpu"
 PROJECT_DIR = "models"
-RUN_NAME    = "gridlock_v1"
+RUN_NAME    = "trafficguard_v1"
 
 # ─── Train ────────────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ def validate(weights_path: str = None):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Gridlock YOLOv8 Training")
+    parser = argparse.ArgumentParser(description="TrafficGuard YOLOv8 Training")
     parser.add_argument("--validate-only", action="store_true",
                         help="Skip training, only validate existing weights")
     parser.add_argument("--weights", type=str, default=None,

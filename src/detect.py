@@ -1,5 +1,5 @@
 """
-detect.py — YOLOv8 inference wrapper for Gridlock
+detect.py — YOLOv8 inference wrapper for TrafficGuard
   Wraps Ultralytics YOLO with a clean Detection dataclass output.
   Supports image, video frame, and webcam inference.
 """
@@ -38,12 +38,12 @@ class Detection:
 
 # ─── Detector ─────────────────────────────────────────────────────────────────
 
-class GridlockDetector:
+class TrafficGuardDetector:
     """
     YOLOv8 inference wrapper.
 
     Usage:
-        detector = GridlockDetector("models/weights/best.pt")
+        detector = TrafficGuardDetector("models/weights/best.pt")
         detections = detector.predict(frame)
     """
 
@@ -70,10 +70,10 @@ class GridlockDetector:
                 "Train first with: python src/train.py"
             )
 
-        print(f"[GridlockDetector] Loading model: {model_path}")
+        print(f"[TrafficGuardDetector] Loading model: {model_path}")
         self.model = YOLO(str(model_path))
         self.model.to(device)
-        print(f"[GridlockDetector] Ready on device={device}")
+        print(f"[TrafficGuardDetector] Ready on device={device}")
 
     def predict(self, frame: np.ndarray, track: bool = False) -> List[Detection]:
         """
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     path = sys.argv[1] if len(sys.argv) > 1 else "yolov8n.pt"
-    detector = GridlockDetector(path)
+    detector = TrafficGuardDetector(path)
     print("Detector loaded. Pass an image path as argument to test.")
     if len(sys.argv) > 2:
         frame, dets = detector.predict_image(sys.argv[2])

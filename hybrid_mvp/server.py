@@ -54,7 +54,7 @@ class ViolationLog(Base):
 Base.metadata.create_all(bind=engine)
 print(f"[DB] SQLite ready: {Path(_db_path).resolve()}")
 app = FastAPI(
-    title="HawkEye Traffic Analytics",
+    title="TrafficGuard Traffic Analytics",
     description="Real-time traffic violation detection backend",
     version="2.0.0",
 )
@@ -317,12 +317,12 @@ def delete_all_violations() -> JSONResponse:
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "model": "HawkEye v2.0"}
+    return {"status": "ok", "model": "TrafficGuard v2.0"}
 
 
 if __name__ == "__main__":
     print("="*60)
-    print("  HawkEye Traffic Analytics Server v2.0")
+    print("  TrafficGuard Traffic Analytics Server v2.0")
     print("  http://0.0.0.0:8001")
     print("  WebSocket: ws://0.0.0.0:8001/ws")
     print("  API docs : http://0.0.0.0:8001/docs")

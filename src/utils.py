@@ -1,5 +1,5 @@
 """
-utils.py — Shared helper functions for Gridlock prototype
+utils.py — Shared helper functions for TrafficGuard prototype
   - Drawing bounding boxes with violation labels
   - IoU / overlap computation
   - Logging violation records to CSV

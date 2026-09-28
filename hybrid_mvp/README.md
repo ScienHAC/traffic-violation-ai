@@ -1,4 +1,4 @@
-# HawkEye Hybrid MVP — Filter-and-Judge Traffic AI
+# TrafficGuard Hybrid MVP — Filter-and-Judge Traffic AI
 
 > **Fast Edge Detector → Vision LLM Reasoner → Live Dashboard**
 
@@ -62,7 +62,7 @@ ollama serve
 
 ### Terminal 2 — Start FastAPI Server
 ```powershell
-# From: gridlock-prototype/
+# From: trafficguard-prototype/
 .venv\Scripts\activate
 cd hybrid_mvp
 uvicorn server:app --host 0.0.0.0 --port 8000 --reload
@@ -70,7 +70,7 @@ uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 
 ### Terminal 3 — Run Edge Client
 ```powershell
-# From: gridlock-prototype/hybrid_mvp/
+# From: trafficguard-prototype/hybrid_mvp/
 # Make sure test_traffic.mp4 is in this folder
 ..\..\.venv\Scripts\python.exe edge_client.py
 ```
@@ -171,4 +171,4 @@ CREATE TABLE violation_log (
 
 ---
 
-*Built for the HawkEye Traffic Vision research project.*
+*Built for the TrafficGuard AI research project.*

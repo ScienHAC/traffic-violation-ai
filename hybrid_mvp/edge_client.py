@@ -541,7 +541,7 @@ def main() -> None:
             draw_hud(display, frame_id, total_frames, t_start,
                      ai_queue.qsize(), confirmed, reviewed, len(scanned_ids))
 
-            cv2.imshow("HawkEye — Traffic Violation Detector", display)
+            cv2.imshow("TrafficGuard — Traffic Violation Detector", display)
             elapsed_ms = (time.time() - t_loop_start) * 1000
             wait_ms    = max(1, int(frame_ms - elapsed_ms))
 
@@ -716,7 +716,7 @@ def main() -> None:
         cv2.putText(display, f"YOLO:{yolo_ms:.0f}ms", (w_d - 130, h_d - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.42, (120, 120, 120), 1)
 
-        cv2.imshow("HawkEye — Traffic Violation Detector", display)
+        cv2.imshow("TrafficGuard — Traffic Violation Detector", display)
         elapsed_ms = (time.time() - t_loop_start) * 1000
         wait_ms    = max(1, int(frame_ms - elapsed_ms))
 
@@ -746,7 +746,7 @@ def main() -> None:
         review_counts[verdict] = review_counts.get(verdict, 0) + 1
 
     print("\n" + "=" * 70)
-    print("  HAWKEYE FINAL REPORT  v6.0  (Helmet + Triple-Riding MVP)")
+    print("  TRAFFICGUARD FINAL REPORT  v6.0  (Helmet + Triple-Riding MVP)")
     print("=" * 70)
     print(f"  Frames processed    : {frame_id} (every {PROCESS_EVERY_N})")
     print(f"  Vehicles scanned    : {len(scanned_ids)}")

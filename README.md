@@ -1,4 +1,4 @@
-# HawkEye Traffic Vision — AI Traffic Violation Detection
+# TrafficGuard AI — AI Traffic Violation Detection
 
 AI system that detects traffic violations (no-helmet, triple-riding, no-seatbelt,
 signal-jump, wrong-way) from live CCTV/IP-camera feeds or recorded video, logs
@@ -78,7 +78,7 @@ First build downloads ~150MB of model weights; subsequent starts are fast
 ### Manual (dev)
 
 ```bash
-# Backend — from gridlock-prototype/
+# Backend — from trafficguard-prototype/
 python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
 uv pip install -r requirements.txt -r hybrid_mvp/requirements.txt
 uvicorn api.main:app --port 8000 &

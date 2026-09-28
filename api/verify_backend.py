@@ -32,7 +32,7 @@ import cv2
 
 class _FakeDetector:
     """
-    Mimics GridlockDetector.predict().
+    Mimics TrafficGuardDetector.predict().
     Returns 1 motorcycle + 3 heavily-overlapping persons, 0 helmets.
     ViolationChecker (real) should flag NO_HELMET + TRIPLE_RIDING.
     """

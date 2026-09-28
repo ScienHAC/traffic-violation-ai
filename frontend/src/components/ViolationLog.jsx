@@ -25,7 +25,7 @@ export default function ViolationLog({ violations, onClear }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `gridlock_violations_${new Date().getTime()}.csv`);
+    link.setAttribute("download", `trafficguard_violations_${new Date().getTime()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
