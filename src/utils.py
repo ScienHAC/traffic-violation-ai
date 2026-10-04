@@ -163,17 +163,16 @@ def save_violation_to_csv(violation, plate_text="UNKNOWN"):
 
 
 def load_violations_log():
-    """Load today's violation log as a DataFrame."""
-    log_path = get_log_path()
-    if log_path.exists():
-        return pd.read_csv(log_path)
+    """Load every day's violation log as one DataFrame (oldest first)."""
+    files = sorted(_ensure_log_dir().glob("violations_*.csv"))
+    if files:
+        return pd.concat((pd.read_csv(f) for f in files), ignore_index=True)
     return pd.DataFrame(columns=[
         "violation_id", "plate_number", "violation_type",
         "confidence", "timestamp", "frame_id", "image_path"
     ])
 
 def clear_violations_log():
-    """Delete today's violation log."""
-    log_path = get_log_path()
-    if log_path.exists():
-        log_path.unlink()
+    """Delete all violation logs."""
+    for f in _ensure_log_dir().glob("violations_*.csv"):
+        f.unlink()

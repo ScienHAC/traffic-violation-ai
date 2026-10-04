@@ -41,7 +41,7 @@ them with evidence, and shows them on a live dashboard.
 | `NO_HELMET` | crop rider's head, classify | [Viddesh1/Bike-Helmet-Detectionv2](https://github.com/Viddesh1/Bike-Helmet-Detectionv2) (YOLOv8, downloaded at build/first-run) |
 | `TRIPLE_RIDING` | count person-boxes overlapping a tracked motorcycle | geometry only, no model |
 | `NO_SEATBELT` | crop car windshield (top ~55% of bbox), classify | [RISEF/yolov11s-seatbelt](https://huggingface.co/RISEF/yolov11s-seatbelt) (YOLOv11-cls, downloaded at build/first-run) |
-| `SIGNAL_JUMP` | tracked vehicle bbox overlaps a configured stop-line ROI | geometry only — pass `signal_roi=x1,y1,x2,y2` as a WS query param |
+| `SIGNAL_JUMP` | tracked vehicle bbox overlaps a configured stop-line ROI | geometry only — set in Settings (stop-line slider), or via WS params `check_signal=true&signal_roi=x1,y1,x2,y2` (values are % of the frame, 0-100) |
 | `WRONG_WAY` | net centroid displacement over last 12 tracked frames opposes `expected_direction` | geometry only — pass `expected_direction=up\|down\|left\|right` |
 
 No models were trained for this project — everything is a pretrained, publicly
@@ -93,7 +93,7 @@ cd frontend && npm install && npm run dev
 Point the dashboard's camera input at an RTSP URL, or connect directly:
 
 ```
-ws://localhost:8000/ws/detect/live?source=rtsp://user:pass@camera-ip/stream&signal_roi=0,300,768,400&expected_direction=down
+ws://localhost:8000/ws/detect/live?source=rtsp://user:pass@camera-ip/stream&check_signal=true&signal_roi=0,56,100,64&check_wrong_way=true&expected_direction=down
 ```
 
 Send `{"stop": true}` over the same socket to end the session. The identical

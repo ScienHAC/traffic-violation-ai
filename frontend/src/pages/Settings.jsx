@@ -89,15 +89,68 @@ export default function Settings() {
           </div>
         )}
 
-        <label className="native-checkbox-label" style={{ marginBottom: 0 }}>
-          <input 
-            type="checkbox" 
+        <label className="native-checkbox-label">
+          <input
+            type="checkbox"
+            className="native-checkbox"
+            checked={settings.checkSeatbelt}
+            onChange={(e) => handleChange('checkSeatbelt', e.target.checked)}
+          />
+          <span className="label-text">No Seatbelt Detection</span>
+        </label>
+
+        <label className="native-checkbox-label">
+          <input
+            type="checkbox"
             className="native-checkbox"
             checked={settings.checkSignal}
             onChange={(e) => handleChange('checkSignal', e.target.checked)}
           />
           <span className="label-text">Signal Jump Detection</span>
         </label>
+
+        {settings.checkSignal && (
+          <div className="control-group child-control">
+            <div className="setting-header">
+              <label className="sub-label">Stop line position (from top of video)</label>
+              <span className="setting-value mono">{settings.stopLineY}%</span>
+            </div>
+            <input
+              type="range"
+              className="native-slider"
+              min="10" max="95" step="1"
+              value={settings.stopLineY}
+              onChange={(e) => handleChange('stopLineY', parseInt(e.target.value, 10))}
+            />
+          </div>
+        )}
+
+        <label className="native-checkbox-label" style={{ marginBottom: 0 }}>
+          <input
+            type="checkbox"
+            className="native-checkbox"
+            checked={settings.checkWrongWay}
+            onChange={(e) => handleChange('checkWrongWay', e.target.checked)}
+          />
+          <span className="label-text">Wrong Way / Lane Violation Detection</span>
+        </label>
+
+        {settings.checkWrongWay && (
+          <div className="control-group child-control">
+            <label className="sub-label">Normal traffic direction in the video</label>
+            <select
+              className="native-number"
+              style={{ width: '100%' }}
+              value={settings.expectedDirection}
+              onChange={(e) => handleChange('expectedDirection', e.target.value)}
+            >
+              <option value="down">Towards camera (moving down)</option>
+              <option value="up">Away from camera (moving up)</option>
+              <option value="left">Moving left</option>
+              <option value="right">Moving right</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="settings-panel">

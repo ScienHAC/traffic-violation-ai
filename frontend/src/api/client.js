@@ -89,10 +89,18 @@ export async function fetchKaggleDataset(slug) {
 }
 
 export function streamVideoDetection(file, settings, onFrame, onDone, onError) {
+  const y = settings.stopLineY;
   const params = new URLSearchParams({
     conf_threshold: settings.confThreshold,
     overlap_threshold: settings.overlapThreshold,
     triple_threshold: settings.tripleThreshold,
+    check_helmet: settings.checkHelmet,
+    check_triple: settings.checkTriple,
+    check_seatbelt: settings.checkSeatbelt,
+    check_signal: settings.checkSignal,
+    signal_roi: `0,${y - 4},100,${y + 4}`,
+    check_wrong_way: settings.checkWrongWay,
+    expected_direction: settings.expectedDirection,
   });
   const ws = new WebSocket(`${WS_BASE}/ws/detect/video?${params.toString()}`);
   

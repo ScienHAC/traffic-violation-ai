@@ -10,7 +10,11 @@ export function SettingsProvider({ children }) {
     tripleThreshold: 3,
     checkHelmet: true,
     checkTriple: true,
+    checkSeatbelt: true,
     checkSignal: false,
+    stopLineY: 60,
+    checkWrongWay: false,
+    expectedDirection: 'down',
     inputMode: 'video',
   });
 

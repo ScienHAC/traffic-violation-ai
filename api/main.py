@@ -467,6 +467,7 @@ def _two_stage_process_frame(
     signal_roi: Optional[list] = None,
     expected_direction: Optional[str] = None,
     track_history: Optional[dict] = None,
+    rules: Optional[dict] = None,
 ) -> tuple:
     """
     Run the two-stage detection on a single frame.
@@ -481,6 +482,11 @@ def _two_stage_process_frame(
     against traffic; `track_history` {vehicle_id: [(cx,cy), ...]} backs it.
     """
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    r = {"helmet": True, "triple": True, "seatbelt": True, "triple_threshold": 3, **(rules or {})}
+    fh, fw = frame.shape[:2]
+    # signal_roi arrives as percentages (0-100) of the frame, so it fits any video size
+    roi_px = ([signal_roi[0] * fw / 100, signal_roi[1] * fh / 100,
+               signal_roi[2] * fw / 100, signal_roi[3] * fh / 100] if signal_roi else None)
 
     def _mk_violation(vtype: str, veh: dict, conf: Optional[float] = None, rider_count: int = 1) -> dict:
         try:
@@ -546,7 +552,7 @@ def _two_stage_process_frame(
         count  = len(riders)
 
         # Triple riding — geometry only
-        if count >= 3:
+        if r["triple"] and count >= r["triple_threshold"]:
             key = (vid, "TRIPLE_RIDING")
             if key not in confirmed_ids:
                 confirmed_ids.add(key)
@@ -556,7 +562,7 @@ def _two_stage_process_frame(
 
         # Helmet check — YOLO second stage (once per vehicle ID)
         key = (vid, "HELMET_CHECK")
-        if key not in confirmed_ids:
+        if r["helmet"] and key not in confirmed_ids:
             confirmed_ids.add(key)
             crop_img = _crop_head(frame, box)
             verdict  = _check_helmet(crop_img)
@@ -581,7 +587,7 @@ def _two_stage_process_frame(
         vid, box = veh["id"], veh["box"]
         if vid < 0:
             continue
-        if _check_signal_jump(box, signal_roi):
+        if _check_signal_jump(box, roi_px):
             key = (vid, "SIGNAL_JUMP")
             if key not in confirmed_ids:
                 confirmed_ids.add(key)
@@ -595,7 +601,7 @@ def _two_stage_process_frame(
 
     # ── Seatbelt check — cars only, once per vehicle ID ────────────────────
     for veh in motor_vehs:
-        if veh["cls"] != _CLS_CAR or veh["id"] < 0:
+        if not r["seatbelt"] or veh["cls"] != _CLS_CAR or veh["id"] < 0:
             continue
         key = (veh["id"], "SEATBELT_CHECK")
         if key not in confirmed_ids:
@@ -945,19 +951,7 @@ async def ws_detect_video(websocket: WebSocket):
         params     = websocket.query_params
         frame_skip = int(params.get("frame_skip", 3))
 
-        # Optional zone/direction config for signal-jump + wrong-way checks.
-        # signal_roi: "x1,y1,x2,y2" pixel stop-line box; expected_direction:
-        # "up"|"down"|"left"|"right" — the lane's normal direction of travel.
-        signal_roi = None
-        roi_param  = params.get("signal_roi")
-        if roi_param:
-            try:
-                signal_roi = [int(v) for v in roi_param.split(",")]
-                if len(signal_roi) != 4:
-                    signal_roi = None
-            except ValueError:
-                signal_roi = None
-        expected_direction = params.get("expected_direction") or None
+        signal_roi, expected_direction, rules = _parse_zone_params(params)
 
         # Receive video bytes from browser
         video_bytes = await websocket.receive_bytes()
@@ -1024,7 +1018,7 @@ async def ws_detect_video(websocket: WebSocket):
                     _two_stage_process_frame(
                         frame, frame_id, model, confirmed_ids, known_violations,
                         signal_roi=signal_roi, expected_direction=expected_direction,
-                        track_history=track_history,
+                        track_history=track_history, rules=rules,
                     )
 
                 # Bridge confirmed violations to Judge Feed
@@ -1082,17 +1076,35 @@ async def ws_detect_video(websocket: WebSocket):
 
 
 def _parse_zone_params(params) -> tuple:
-    """Shared query-param parsing for signal_roi + expected_direction."""
+    """Query params -> (signal_roi, expected_direction, rules).
+
+    Signal-jump runs only when `check_signal` is on AND `signal_roi` ("x1,y1,x2,y2")
+    is given; wrong-way only when `check_wrong_way` is on AND `expected_direction`
+    ("up"|"down"|"left"|"right") is given. Helmet/triple/seatbelt default to on.
+    """
+    def on(name: str, default: bool) -> bool:
+        return params.get(name, "true" if default else "false").lower() == "true"
+
     signal_roi = None
-    roi_param  = params.get("signal_roi")
-    if roi_param:
+    if on("check_signal", False) and params.get("signal_roi"):
         try:
-            signal_roi = [int(v) for v in roi_param.split(",")]
+            signal_roi = [int(v) for v in params["signal_roi"].split(",")]
             if len(signal_roi) != 4:
                 signal_roi = None
         except ValueError:
             signal_roi = None
-    return signal_roi, (params.get("expected_direction") or None)
+    direction = params.get("expected_direction") or None
+    if not on("check_wrong_way", False) or direction not in ("up", "down", "left", "right"):
+        direction = None
+    try:
+        triple_threshold = max(2, int(params.get("triple_threshold", 3)))
+    except ValueError:
+        triple_threshold = 3
+    rules = {
+        "helmet": on("check_helmet", True), "triple": on("check_triple", True),
+        "seatbelt": on("check_seatbelt", True), "triple_threshold": triple_threshold,
+    }
+    return signal_roi, direction, rules
 
 
 @app.websocket("/ws/detect/live")
@@ -1110,7 +1122,7 @@ async def ws_detect_live(websocket: WebSocket):
     params     = websocket.query_params
     source     = params.get("source")
     frame_skip = int(params.get("frame_skip", 3))
-    signal_roi, expected_direction = _parse_zone_params(params)
+    signal_roi, expected_direction, rules = _parse_zone_params(params)
 
     if not source:
         await websocket.send_text(json.dumps({"error": "missing ?source= camera URL"}))
@@ -1165,7 +1177,7 @@ async def ws_detect_live(websocket: WebSocket):
             annotated, violations, *_ = _two_stage_process_frame(
                 frame, frame_id, model, confirmed_ids, known_violations,
                 signal_roi=signal_roi, expected_direction=expected_direction,
-                track_history=track_history,
+                track_history=track_history, rules=rules,
             )
 
             for v in violations:
