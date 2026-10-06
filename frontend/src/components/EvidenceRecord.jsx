@@ -1,5 +1,6 @@
 import React from 'react';
 import './EvidenceRecord.css';
+import { violationReportUrl } from '../api/judgeClient';
 
 export default function EvidenceRecord({ record, variant = 'compact' }) {
   const formatType = (type) => {
@@ -58,6 +59,13 @@ export default function EvidenceRecord({ record, variant = 'compact' }) {
       <td className="er-cell-frame mono text-secondary">
         {record.frameId !== undefined && record.frameId !== null ? `f${record.frameId}` : '—'}
       </td>
+      {isFull && (
+        <td className="er-cell-report">
+          {record.id ? (
+            <a href={violationReportUrl(record.id)} target="_blank" rel="noopener noreferrer" className="mono" title="Download PDF report for this violation">PDF</a>
+          ) : '—'}
+        </td>
+      )}
     </tr>
   );
 }

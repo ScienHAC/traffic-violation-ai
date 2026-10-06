@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { detectImage, streamVideoDetection } from '../api/client';
+import { summaryReportUrl } from '../api/judgeClient';
 import './DetectionPanel.css';
 
 export default function DetectionPanel({ settings, onViolationsUpdate }) {
@@ -136,9 +137,15 @@ export default function DetectionPanel({ settings, onViolationsUpdate }) {
           </button>
         )}
         {(resultImage || error) && !processingVideo && (
-          <button className="reset-btn" onClick={resetAll}>
-            UPLOAD ANOTHER
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <a className="reset-btn" href={summaryReportUrl()} target="_blank" rel="noopener noreferrer"
+               style={{ textDecoration: 'none' }} title="Download the violation summary report as a PDF">
+              DOWNLOAD REPORT (PDF)
+            </a>
+            <button className="reset-btn" onClick={resetAll}>
+              UPLOAD ANOTHER
+            </button>
+          </div>
         )}
       </div>
 

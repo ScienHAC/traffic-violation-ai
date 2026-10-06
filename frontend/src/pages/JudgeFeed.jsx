@@ -5,6 +5,7 @@ import {
   connectJudgeWebSocket,
   buildJudgeImageUrl,
   clearJudgeLogs,
+  summaryReportUrl,
 } from '../api/judgeClient';
 import EvidenceRecord from '../components/EvidenceRecord';
 import './JudgeFeed.css';
@@ -135,6 +136,10 @@ export default function JudgeFeed() {
           <span className="feed-title govt-badge">Confirmed Violations Log</span>
           <div className="feed-header-actions">
              <span className="feed-count">{violations.length} RECORDS</span>
+             <a className="btn btn-sm" href={summaryReportUrl()} target="_blank" rel="noopener noreferrer"
+                style={{ textDecoration: 'none', border: '1px solid currentColor', padding: '4px 10px', fontWeight: 'bold' }}>
+               ⬇ SUMMARY REPORT (PDF)
+             </a>
              <button 
                className="btn btn-sm govt-button-danger" 
                onClick={handleClearLogs}
@@ -192,6 +197,7 @@ export default function JudgeFeed() {
                   <th>CONFIDENCE</th>
                   <th>TIME</th>
                   <th>FRAME</th>
+                  <th>REPORT</th>
                 </tr>
               </thead>
               <tbody>

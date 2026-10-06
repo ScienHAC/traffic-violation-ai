@@ -3,6 +3,8 @@ import { readPlate } from '../api/client';
 import EvidenceRecord from './EvidenceRecord';
 import './ViolationLog.css';
 
+import { summaryReportUrl } from '../api/judgeClient';
+
 export default function ViolationLog({ violations, onClear }) {
   const [alprFile, setAlprFile] = useState(null);
   const [alprResult, setAlprResult] = useState(null);
@@ -56,9 +58,15 @@ export default function ViolationLog({ violations, onClear }) {
       <div className="log-section">
         <div className="log-header">
           <div className="log-title govt-badge">Live Violation Log</div>
-          <button className="btn-export" onClick={exportCSV} disabled={violations.length === 0}>
-            EXPORT CSV
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <a className="btn-export" href={summaryReportUrl()} target="_blank" rel="noopener noreferrer"
+               style={{ textDecoration: 'none' }}>
+              REPORT (PDF)
+            </a>
+            <button className="btn-export" onClick={exportCSV} disabled={violations.length === 0}>
+              EXPORT CSV
+            </button>
+          </div>
         </div>
         
         <div className="table-wrapper">

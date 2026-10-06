@@ -81,3 +81,6 @@ export function buildJudgeImageUrl(imagePath) {
   // If it's a bare filename like "violations/xyz.jpg"
   return `${JUDGE_API_BASE}/static/${imagePath}`;
 }
+
+export const violationReportUrl = (id) => `${JUDGE_API_BASE}/api/violations/${id}/report.pdf`;
+export const summaryReportUrl = () => `${JUDGE_API_BASE}/api/reports/summary.pdf`;
