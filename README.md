@@ -38,8 +38,8 @@ them with evidence, and shows them on a live dashboard.
 
 | Type | Method | Model |
 |---|---|---|
-| `NO_HELMET` | crop rider's head, classify | [Viddesh1/Bike-Helmet-Detectionv2](https://github.com/Viddesh1/Bike-Helmet-Detectionv2) (YOLOv8, downloaded at build/first-run) |
-| `TRIPLE_RIDING` | count person-boxes overlapping a tracked motorcycle | geometry only, no model |
+| `NO_HELMET` | a head-detector finds heads in the frame; a head only counts if it belongs to a rider sitting on a tracked **motorcycle** (pedal cycles and rickshaws are ignored). A rider is flagged after 2+ frames agree on "no helmet" (1 for a single photo) | [alexdjulin/BikeHelmetDetection](https://github.com/alexdjulin/BikeHelmetDetection) (YOLOv8n, MIT; trained on the CC0 Kaggle *Helmet Detection* set), downloaded at build/first-run |
+| `TRIPLE_RIDING` | each person is assigned to the one bike they overlap most; 3+ riders on a bike in 2+ frames | geometry only, no model |
 | `NO_SEATBELT` | crop car windshield (top ~55% of bbox), classify | [RISEF/yolov11s-seatbelt](https://huggingface.co/RISEF/yolov11s-seatbelt) (YOLOv11-cls, downloaded at build/first-run) |
 | `SIGNAL_JUMP` | tracked vehicle bbox overlaps a configured stop-line ROI | geometry only — set in Settings (stop-line slider), or via WS params `check_signal=true&signal_roi=x1,y1,x2,y2` (values are % of the frame, 0-100) |
 | `WRONG_WAY` | net centroid displacement over last 12 tracked frames opposes `expected_direction` | geometry only — pass `expected_direction=up\|down\|left\|right` |
@@ -51,13 +51,24 @@ license before commercial use.
 
 ## Measured performance
 
+**Helmet detection** (checked by eye on real clips and on 200 labelled photos from the public
+[Hirai-Labs helmet dataset](https://huggingface.co/datasets/Hirai-Labs/helmet-vlm-instruct-dataset)):
+
+| | Before (crop the bike, classify) | Now (heads + rider check + frame voting) |
+|---|---|---|
+| Real rider with no helmet, rear view (Haridwar clip) | missed (0) | flagged |
+| Helmeted riders on 5 other clips (Delhi, 3 × Barasat, Palembang) | 2 false alarms | 0 false alarms |
+| Cyclist / pedal rickshaw | flagged | ignored |
+| Labelled photos with a helmetless rider | ~4% caught, flagged every rider | ~45% caught, 0 false alarms on helmeted photos |
+
+Recall is still the weak side: roughly half of helmetless riders in single photos are missed, and
+from behind a black helmet and black hair look alike at CCTV distances. Treat it as assistive.
+
+**Speed:**
 On the bundled sample clip (`hybrid_mvp/test_traffic.mp4`, 768×432): **~19 fps**
-processed (every 3rd frame) on a CPU-only machine, no GPU. Helmet/seatbelt
-classifiers ran without error and produced plausible per-vehicle confidences.
-Accuracy (precision/recall) has **not** been measured against ground truth —
-the pretrained weights come with their own reported metrics (see each model's
-README linked above); treat detections as assistive, not enforcement-grade,
-without further validation on your own footage.
+processed (every 3rd frame) on a CPU-only machine, no GPU. Seatbelt, signal-jump and wrong-way
+were checked on the Delhi clip. Seatbelt precision/recall is **not** measured against ground truth (see its
+model card); treat all detections as assistive, not enforcement-grade, without validating on your own footage.
 
 ## Run it
 
@@ -144,6 +155,11 @@ spot pricing), Docker Compose, same setup — see plan.md for details.
   history), not real traffic-light-state or lane-polygon detection — you
   configure the zone/direction per camera via query params rather than
   drawing them in the UI.
+- Helmet model learned from ~760 public images, far smaller than commercial systems train on. The way
+  to close the gap is fine-tuning on labelled Indian CCTV footage; the pipeline is ready for a better model
+  (swap the weights file and `_HELMET_MODEL_URL`).
+- Wrong-way needs motion, so it works on video only; images support helmet, triple-riding, seatbelt and
+  signal-jump.
 - Seatbelt classifier's training set is small and imbalanced (see its model
   card) — expect it to need re-validation on your own footage.
 - ALPR (EasyOCR) works but plate accuracy on low-res/angled Indian plates is

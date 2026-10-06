@@ -28,7 +28,7 @@ import cv2
 import numpy as np
 from fastapi import (
     FastAPI, File, HTTPException, Query, UploadFile,
-    WebSocket, WebSocketDisconnect,
+    Request, WebSocket, WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -75,11 +75,12 @@ print(f"[api/main.py] Compute device: {_DEVICE.upper()}")
 
 # ─── Two-stage helmet pipeline constants ──────────────────────────────────────
 
-_HELMET_MODEL_URL   = "https://raw.githubusercontent.com/Viddesh1/Bike-Helmet-Detectionv2/main/weights/best.pt"
-_HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "trafficguard-prototype" / "models" / "bike_helmet_yolov8.pt"
+# YOLOv8n head detector (classes "with helmet" / "without helmet"), MIT: github.com/alexdjulin/BikeHelmetDetection
+_HELMET_MODEL_URL   = "https://raw.githubusercontent.com/alexdjulin/BikeHelmetDetection/main/models/best_260424_0028.pt"
+_HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "trafficguard-prototype" / "models" / "helmet_head_yolov8n.pt"
 # Normalise path so it works whether called from repo root or api/ dir
 if not _HELMET_MODEL_LOCAL.parent.exists():
-    _HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "models" / "bike_helmet_yolov8.pt"
+    _HELMET_MODEL_LOCAL = Path(__file__).parent.parent / "models" / "helmet_head_yolov8n.pt"
 _HELMET_MODEL_LOCAL.parent.mkdir(parents=True, exist_ok=True)
 
 # Seatbelt classifier — YOLOv11s-cls, binary (no_seatbelt / seat_belt), run on
@@ -88,7 +89,8 @@ _SEATBELT_MODEL_URL   = "https://huggingface.co/RISEF/yolov11s-seatbelt/resolve/
 _SEATBELT_MODEL_LOCAL = _HELMET_MODEL_LOCAL.parent / "seatbelt_yolov11s_cls.pt"
 _SEATBELT_CONF = 0.55
 
-_HELMET_CONF = 0.65
+_HELMET_CONF = 0.45   # head-detector confidence
+_HELMET_VOTES = 2      # frames that must agree before a rider is flagged
 _COCO_CONF   = 0.30
 _MIN_VEH_PX  = 40
 _HEAD_PAD    = 0.35   # 35% extra upward padding on crop
@@ -176,7 +178,7 @@ def _ensure_helmet_weights() -> Optional[Path]:
     """Download helmet weights once and cache; reuse on later runs."""
     if _HELMET_MODEL_LOCAL.exists() and _HELMET_MODEL_LOCAL.stat().st_size > 1_000_000:
         return _HELMET_MODEL_LOCAL
-    print(f"[api] Downloading helmet weights (~88MB) from:\n      {_HELMET_MODEL_URL}")
+    print(f"[api] Downloading helmet weights (~6MB) from:\n      {_HELMET_MODEL_URL}")
     try:
         import requests as req
         with req.get(_HELMET_MODEL_URL, stream=True, timeout=120) as r:
@@ -343,6 +345,12 @@ def _check_wrong_way(history: list, expected_direction: Optional[str]) -> bool:
     return False
 
 
+def _reset_tracker(model) -> None:
+    """ByteTrack state lives on the shared model; clear it so each video starts at fresh IDs."""
+    for t in getattr(getattr(model, "predictor", None), "trackers", None) or []:
+        t.reset()
+
+
 def _boxes_overlap(a, b) -> bool:
     return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
 
@@ -367,26 +375,53 @@ def _crop_head(frame: np.ndarray, box: list) -> np.ndarray:
     return crop.copy()
 
 
-def _check_helmet(crop_img: np.ndarray) -> str:
-    """Returns 'NO_HELMET', 'HELMET', or 'SKIP'."""
+def _detect_heads(frame: np.ndarray, conf: float = _HELMET_CONF) -> list:
+    """Heads found by the helmet model: [(box, is_no_helmet, conf), ...]."""
     hmodel = _get_helmet_model()
     if hmodel is None:
-        return "SKIP"
+        return []
     try:
-        results = hmodel.predict(crop_img, conf=_HELMET_CONF, verbose=False, imgsz=320)
-        if not results or results[0].boxes is None or len(results[0].boxes) == 0:
-            return "SKIP"
-        clses = results[0].boxes.cls.cpu().numpy().astype(int)
-        confs = results[0].boxes.conf.cpu().numpy()
-        relevant = [(c, cf) for c, cf in zip(clses, confs)
-                    if c in _helmet_ids or c in _no_helmet_ids]
-        if not relevant:
-            return "SKIP"
-        best = max(relevant, key=lambda x: x[1])[0]
-        return "NO_HELMET" if best in _no_helmet_ids else "HELMET"
+        res = hmodel.predict(frame, conf=conf, verbose=False, imgsz=960)[0]
     except Exception as e:
         print(f"  [HELMET ERR] {e}")
-        return "SKIP"
+        return []
+    heads = []
+    for b, c, p in zip(res.boxes.xyxy.cpu().numpy(), res.boxes.cls.cpu().numpy().astype(int),
+                       res.boxes.conf.cpu().numpy()):
+        if c in _no_helmet_ids:
+            heads.append((b.tolist(), True, float(p)))
+        elif c in _helmet_ids:
+            heads.append((b.tolist(), False, float(p)))
+    return heads
+
+
+def _assign_riders(bikes: list, persons: list) -> dict:
+    """bike index -> riders. A person counts as a rider of exactly one bike: the one
+    it overlaps most (and at least 25% of the person must overlap it). This stops a
+    neighbouring bike's rider being counted as a passenger in dense traffic."""
+    riders: dict = {}
+    for p in persons:
+        pb = p["box"]
+        area = max((pb[2] - pb[0]) * (pb[3] - pb[1]), 1)
+        best, bi = 0.0, None
+        for i, b in enumerate(bikes):
+            bb = b["box"]
+            iw = min(pb[2], bb[2]) - max(pb[0], bb[0])
+            ih = min(pb[3], bb[3]) - max(pb[1], bb[1])
+            if iw > 0 and ih > 0 and iw * ih > best:
+                best, bi = iw * ih, i
+        if bi is not None and best / area >= 0.25:
+            riders.setdefault(bi, []).append(p)
+    return riders
+
+
+def _head_of(person: dict, heads: list):
+    """Most confident helmet-model head whose centre is in the top 55% of this rider."""
+    x1, y1, x2, y2 = person["box"]
+    limit = y1 + 0.55 * (y2 - y1)
+    near = [h for h in heads
+            if x1 <= (h[0][0] + h[0][2]) / 2 <= x2 and y1 <= (h[0][1] + h[0][3]) / 2 <= limit]
+    return max(near, key=lambda h: h[2]) if near else None
 
 
 def _encode_jpeg(img: np.ndarray) -> bytes:
@@ -426,12 +461,15 @@ def _annotate(
         vid = veh["id"]
         lbl = _CLS_LABEL.get(veh["cls"], "VEH")
         vtype = viol_types.get(vid, "")
+        is_bike = veh in bikes
+        if (vtype in ("NO_HELMET", "TRIPLE_RIDING") and not is_bike) or (vtype == "NO_SEATBELT" and is_bike):
+            vtype = ""
         if vtype in _COLORS:
             color = _COLORS[vtype]
             tag   = f"{lbl}#{vid} {_VIOLATION_TAGS[vtype]}"
             cv2.rectangle(disp, (x1-2,y1-2), (x2+2,y2+2), color, 3)
         else:
-            color = _COLORS["OK"] if veh in bikes else _COLORS["SCAN"]
+            color = _COLORS["OK"] if is_bike else _COLORS["SCAN"]
             tag   = f"{lbl}#{vid}"
         cv2.rectangle(disp, (x1,y1), (x2,y2), color, 2)
         cv2.putText(disp, tag, (x1+1, max(15, y1-4)),
@@ -468,6 +506,7 @@ def _two_stage_process_frame(
     expected_direction: Optional[str] = None,
     track_history: Optional[dict] = None,
     rules: Optional[dict] = None,
+    votes: Optional[dict] = None,
 ) -> tuple:
     """
     Run the two-stage detection on a single frame.
@@ -482,7 +521,7 @@ def _two_stage_process_frame(
     against traffic; `track_history` {vehicle_id: [(cx,cy), ...]} backs it.
     """
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    r = {"helmet": True, "triple": True, "seatbelt": True, "triple_threshold": 3, **(rules or {})}
+    r = {"helmet": True, "triple": True, "seatbelt": True, "triple_threshold": 3, "votes": _HELMET_VOTES, **(rules or {})}
     fh, fw = frame.shape[:2]
     # signal_roi arrives as percentages (0-100) of the frame, so it fits any video size
     roi_px = ([signal_roi[0] * fw / 100, signal_roi[1] * fh / 100,
@@ -540,37 +579,53 @@ def _two_stage_process_frame(
             elif c in _BIKE_CLASSES:  bikes.append(det)
             elif c in _MOTOR_CLASSES: motor_vehs.append(det)
 
+    riders_map = _assign_riders(bikes, persons)
+    votes = votes if votes is not None else {}
+    big = [b for b in bikes if b["bw"] >= _MIN_VEH_PX and b["bh"] >= _MIN_VEH_PX]
+    heads = _detect_heads(frame, r.get("head_conf", _HELMET_CONF)) if r["helmet"] and big else []
+
     # ── Bike violation checks ─────────────────────────────────────────────
-    for veh in bikes:
-        vid, box = veh["id"], veh["box"]
-        bw, bh   = veh["bw"], veh["bh"]
-
-        if bw < _MIN_VEH_PX or bh < _MIN_VEH_PX or vid < 0:
+    for bi, veh in enumerate(bikes):
+        vid = veh["id"]
+        if veh["bw"] < _MIN_VEH_PX or veh["bh"] < _MIN_VEH_PX or vid < 0:
             continue
-
-        riders = [p for p in persons if _boxes_overlap(p["box"], box)]
+        riders = riders_map.get(bi, [])
         count  = len(riders)
 
-        # Triple riding — geometry only
-        if r["triple"] and count >= r["triple_threshold"]:
-            key = (vid, "TRIPLE_RIDING")
-            if key not in confirmed_ids:
-                confirmed_ids.add(key)
-                avg_conf = sum(r["conf"] for r in riders) / len(riders)
-                violations.append(_mk_violation("TRIPLE_RIDING", veh, conf=avg_conf, rider_count=count))
+        # Helmet and triple-riding rules are for motorcycles only: pedal cycles and
+        # cycle-rickshaws are legal without a helmet, and the tracker sometimes flips
+        # their label, so require "motorcycle" in the majority of this track's frames.
+        seen = votes.setdefault(("c", vid), [0, 0])
+        seen[0 if veh["cls"] == _CLS_MOTO else 1] += 1
+        need = 3 if r["votes"] > 1 else 1   # video: seen as a motorcycle in 3+ frames; a photo has one look
+        if seen[0] < need or seen[1] > 0:   # ever labelled a bicycle => treat as pedal vehicle
             continue
 
-        # Helmet check — YOLO second stage (once per vehicle ID)
-        key = (vid, "HELMET_CHECK")
-        if r["helmet"] and key not in confirmed_ids:
-            confirmed_ids.add(key)
-            crop_img = _crop_head(frame, box)
-            verdict  = _check_helmet(crop_img)
-            if verdict == "NO_HELMET":
-                vkey = (vid, "NO_HELMET")
-                if vkey not in confirmed_ids:
+        # Triple riding: threshold must hold for r['votes'] frames (one frame can mis-assign a neighbour)
+        if r["triple"] and count >= r["triple_threshold"]:
+            votes[("t", vid)] = votes.get(("t", vid), 0) + 1
+            key = (vid, "TRIPLE_RIDING")
+            if votes[("t", vid)] >= r["votes"] and key not in confirmed_ids:
+                confirmed_ids.add(key)
+                avg_conf = sum(p["conf"] for p in riders) / count
+                violations.append(_mk_violation("TRIPLE_RIDING", veh, conf=avg_conf, rider_count=count))
+
+        # Helmet: each rider's head is judged every processed frame; a rider is flagged
+        # only after _HELMET_VOTES frames say "no helmet" and they outnumber "helmet" ones.
+        vkey = (vid, "NO_HELMET")
+        if r["helmet"] and vkey not in confirmed_ids:
+            for p in riders:
+                if p["id"] < 0:
+                    continue
+                head = _head_of(p, heads)
+                if head is None:
+                    continue
+                tally = votes.setdefault(("h", p["id"]), [0, 0])
+                tally[0 if head[1] else 1] += 1
+                if tally[0] >= r["votes"] and tally[0] > tally[1]:
                     confirmed_ids.add(vkey)
-                    violations.append(_mk_violation("NO_HELMET", veh, rider_count=count))
+                    violations.append(_mk_violation("NO_HELMET", veh, conf=head[2], rider_count=count))
+                    break
 
     # ── Track centroid history (feeds wrong-way direction check) ──────────
     if track_history is not None:
@@ -773,73 +828,58 @@ async def health():
 # POST /detect/image
 @app.post("/detect/image", response_model=DetectImageResponse, tags=["Detection"])
 async def detect_image(
+    request: Request,
     file: UploadFile = File(..., description="Traffic image (JPEG/PNG/BMP)"),
-    conf_threshold: float = Query(0.45, ge=0.1, le=0.9, description="YOLO confidence threshold"),
-    overlap_threshold: float = Query(0.30, ge=0.1, le=0.8, description="Person-vehicle overlap threshold"),
-    triple_threshold: int = Query(3, ge=2, le=5, description="Riders to trigger triple-riding violation"),
     run_alpr: bool = Query(True, description="Run ALPR plate reading on violated vehicles"),
 ):
     """
-    Detect violations in a single uploaded image.
-    Returns detections, violations, and annotated image as base64 JPEG.
+    One image through the same two-stage pipeline as video: helmet, triple riding,
+    seatbelt and (with check_signal + signal_roi) signal jump. Wrong-way needs motion,
+    so it is video-only. Accepts the same check_* query params as the video socket.
     """
-    raw = await file.read()
-    frame = _decode_image(raw)
+    frame = _decode_image(await file.read())
+    signal_roi, _, rules = _parse_zone_params(request.query_params)
+    rules["votes"] = 1   # one image is one look, so one vote is enough
+    rules["head_conf"] = float(request.query_params.get("head_conf", 0.35))
+    model = _get_coco_model()
+    _reset_tracker(model)
+    out = _two_stage_process_frame(frame, 0, model, set(), {}, signal_roi=signal_roi, rules=rules)
+    if len(out) != 5:
+        raise HTTPException(status_code=500, detail="Detection failed")
+    annotated, violations, bikes, persons, motor_vehs = out
 
-    # Apply per-request conf threshold without rebuilding the model
-    det = get_detector()
-    old_conf = det.conf
-    det.conf = conf_threshold
-
-    try:
-        detections = det.predict(frame)
-    finally:
-        det.conf = old_conf
-
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    checker = get_checker(overlap=overlap_threshold, triple=triple_threshold)
-    violations = checker.check(detections, frame_id=0, timestamp=ts)
-
-    # ALPR on each violation
+    alpr = None
     if run_alpr and violations:
         try:
             alpr = get_alpr()
-            for v in violations:
-                alpr_res = _run_alpr_on_violation(frame, v, alpr)
-                if alpr_res:
-                    v.plate_text = alpr_res.plate_number
-                    v.detection_tier = alpr_res.detection_tier
-                    v.ocr_confidence_raw = alpr_res.ocr_confidence_raw
-                    v.plate_valid = alpr_res.plate_valid
-                else:
-                    v.plate_text = "UNKNOWN"
-                    v.detection_tier = None
-                    v.ocr_confidence_raw = None
-                    v.plate_valid = False
         except HTTPException:
-            pass  # ALPR not installed — leave plate_text as UNKNOWN
+            alpr = None   # ALPR not installed — plates stay UNKNOWN
 
-    # Save to CSV log
-    try:
-        from src.utils import save_violation_to_csv
-        for v in violations:
-            save_violation_to_csv(v, v.plate_text)
-    except Exception:
-        pass
-
-    # Annotate frame
-    try:
-        from src.utils import annotate_frame
-        annotated = annotate_frame(frame, detections, violations)
-    except Exception:
-        annotated = frame
+    for v in violations:
+        crop = v.pop("_crop_bytes", b"")
+        res = _run_alpr_on_violation(frame, v, alpr) if alpr else None
+        v["plate_text"] = res.plate_number if res else "UNKNOWN"
+        v["detection_tier"] = getattr(res, "detection_tier", None) if res else None
+        v["ocr_confidence_raw"] = getattr(res, "ocr_confidence_raw", None) if res else None
+        v["plate_valid"] = bool(getattr(res, "plate_valid", False)) if res else False
+        if crop:
+            await _post_to_judge(v["vehicle_id"], v["violation_type"], crop, 0)
+        try:
+            from src.utils import save_violation_to_csv
+            save_violation_to_csv(v, v["plate_text"])
+        except Exception:
+            pass
 
     return {
-        "detections": [_detection_to_dict(d) for d in detections],
-        "violations": [_violation_to_dict(v) for v in violations],
+        "detections": [
+            {"cls": _CLS_LABEL.get(d["cls"], "OBJ").lower(), "conf": round(d["conf"], 4),
+             "bbox": [round(x, 2) for x in d["box"]], "track_id": int(d["id"])}
+            for d in bikes + persons + motor_vehs
+        ],
+        "violations": violations,
         "annotated_image_b64": _frame_to_b64(annotated),
         "frame_id": 0,
-        "timestamp": ts,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
 
@@ -963,6 +1003,7 @@ async def ws_detect_video(websocket: WebSocket):
 
         # Load models (singletons — cached after first call)
         model = _get_coco_model()
+        _reset_tracker(model)
         _get_helmet_model()     # pre-warm so first frame isn't slow
         _get_seatbelt_model()
 
@@ -978,6 +1019,7 @@ async def ws_detect_video(websocket: WebSocket):
         confirmed_ids    : set  = set()   # vehicles already flagged (never re-flag)
         known_violations : dict = {}      # {vehicle_id: violation_type} — persists all video
         track_history    : dict = {}      # {vehicle_id: [(cx,cy), ...]} — feeds wrong-way check
+        votes            : dict = {}      # per-session helmet / triple-riding votes
         # Cache the last detected objects so we can annotate skipped frames too
         _last_bikes     : list = []
         _last_persons   : list = []
@@ -1018,7 +1060,7 @@ async def ws_detect_video(websocket: WebSocket):
                     _two_stage_process_frame(
                         frame, frame_id, model, confirmed_ids, known_violations,
                         signal_roi=signal_roi, expected_direction=expected_direction,
-                        track_history=track_history, rules=rules,
+                        track_history=track_history, rules=rules, votes=votes,
                     )
 
                 # Bridge confirmed violations to Judge Feed
@@ -1130,6 +1172,7 @@ async def ws_detect_live(websocket: WebSocket):
         return
 
     model = _get_coco_model()
+    _reset_tracker(model)
     _get_helmet_model()
     _get_seatbelt_model()
     try:
@@ -1146,6 +1189,7 @@ async def ws_detect_live(websocket: WebSocket):
     confirmed_ids: set = set()
     known_violations: dict = {}
     track_history: dict = {}
+    votes: dict = {}
     frame_id = 0
 
     try:
@@ -1177,7 +1221,7 @@ async def ws_detect_live(websocket: WebSocket):
             annotated, violations, *_ = _two_stage_process_frame(
                 frame, frame_id, model, confirmed_ids, known_violations,
                 signal_roi=signal_roi, expected_direction=expected_direction,
-                track_history=track_history, rules=rules,
+                track_history=track_history, rules=rules, votes=votes,
             )
 
             for v in violations:

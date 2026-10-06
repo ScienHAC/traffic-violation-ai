@@ -26,7 +26,7 @@ RUN python -c "from ultralytics import YOLO; YOLO('yolov8s.pt')" \
     && python -c "\
 import requests, pathlib; \
 pathlib.Path('models').mkdir(exist_ok=True); \
-open('models/bike_helmet_yolov8.pt','wb').write(requests.get('https://raw.githubusercontent.com/Viddesh1/Bike-Helmet-Detectionv2/main/weights/best.pt', timeout=120).content); \
+open('models/helmet_head_yolov8n.pt','wb').write(requests.get('https://raw.githubusercontent.com/alexdjulin/BikeHelmetDetection/main/models/best_260424_0028.pt', timeout=120).content); \
 open('models/seatbelt_yolov11s_cls.pt','wb').write(requests.get('https://huggingface.co/RISEF/yolov11s-seatbelt/resolve/main/weights/best.pt', timeout=120).content)"
 
 # Create data directory for any outputs
